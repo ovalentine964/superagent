@@ -26,7 +26,7 @@ from fastapi import FastAPI, HTTPException, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 
-from gateway.router import Channel, InboundMessage, MessageRouter
+from superagent.gateway.router import Channel, InboundMessage, MessageRouter
 
 logger = structlog.get_logger()
 

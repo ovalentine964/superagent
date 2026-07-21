@@ -3,7 +3,7 @@ SUPERAGENT — Basic Metrics Collection
 Lightweight, in-process metrics without external dependencies.
 
 Usage:
-    from monitoring.metrics import MetricsCollector, metrics_router
+    from superagent.monitoring.metrics import MetricsCollector, metrics_router
     app.include_router(metrics_router)
 
     # Track stuff

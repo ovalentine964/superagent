@@ -3,7 +3,7 @@ SUPERAGENT — Health Check Endpoint
 Lightweight, dependency-free health check for Docker/Render/load balancers.
 
 Usage:
-    from monitoring.health_check import health_router
+    from superagent.monitoring.health_check import health_router
     app.include_router(health_router)
 """
 

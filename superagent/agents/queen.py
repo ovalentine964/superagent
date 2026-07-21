@@ -22,7 +22,7 @@ from typing import Any
 import structlog
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from agents.base_agent import AgentContext, AgentResult, BaseAgent
+from superagent.agents.base_agent import AgentContext, AgentResult, BaseAgent
 
 logger = structlog.get_logger()
 
@@ -71,9 +71,9 @@ class QueenOrchestrator(BaseAgent):
 
     async def _initialize_swarms(self) -> None:
         """Create and initialize all swarm agents."""
-        from agents.coord_swarm import CoordSwarm
-        from agents.info_swarm import InfoSwarm
-        from agents.market_swarm import MarketSwarm
+        from superagent.agents.coord_swarm import CoordSwarm
+        from superagent.agents.info_swarm import InfoSwarm
+        from superagent.agents.market_swarm import MarketSwarm
 
         swarm_classes = {
             SwarmType.MARKET: MarketSwarm,

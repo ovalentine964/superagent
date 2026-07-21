@@ -185,7 +185,7 @@ class MessageRouter:
                 )
 
             # Build context for the agent
-            from agents.base_agent import AgentContext
+            from superagent.agents.base_agent import AgentContext
 
             context = AgentContext(
                 session_id=session.session_key,

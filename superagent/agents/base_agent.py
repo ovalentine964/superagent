@@ -139,7 +139,7 @@ class BaseAgent(ABC):
     async def _register_tools(self) -> None:
         """Register tools from the tool registry. Override in subclasses."""
         # Imported lazily to avoid circular imports
-        from tools.registry import ToolRegistry
+        from superagent.tools.registry import ToolRegistry
 
         registry = ToolRegistry.get_instance()
         for tool_name in self.tools:

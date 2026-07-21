@@ -14,7 +14,7 @@ from typing import Any
 
 import structlog
 
-from agents.base_agent import AgentContext, AgentResult, BaseAgent
+from superagent.agents.base_agent import AgentContext, AgentResult, BaseAgent
 
 logger = structlog.get_logger()
 

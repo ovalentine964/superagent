@@ -45,20 +45,20 @@ async def main() -> None:
     logger.info("superagent_starting", version="0.1.0")
 
     # ── 1. Initialize Database ──────────────────────────────────
-    from data.migrations import init_db
+    from superagent.data.migrations import init_db
 
     db_url = os.getenv("DATABASE_URL", "sqlite:///./data/superagent.db")
     engine = init_db(db_url)
     logger.info("database_ready")
 
     # ── 2. Initialize Tool Registry ─────────────────────────────
-    from tools.registry import ToolRegistry
+    from superagent.tools.registry import ToolRegistry
 
     registry = ToolRegistry.get_instance()
 
     # Register built-in tools
-    from tools.communication_tools import register as register_comm
-    from tools.market_tools import register as register_market
+    from superagent.tools.communication_tools import register as register_comm
+    from superagent.tools.market_tools import register as register_market
 
     register_market(registry)
     register_comm(registry)
@@ -71,9 +71,9 @@ async def main() -> None:
     # ── 3. Initialize Memory System ─────────────────────────────
     import redis as redis_lib
 
-    from memory.knowledge import KnowledgeBase
-    from memory.learning import LearningEngine
-    from memory.store import UnifiedMemoryStore
+    from superagent.memory.knowledge import KnowledgeBase
+    from superagent.memory.learning import LearningEngine
+    from superagent.memory.store import UnifiedMemoryStore
 
     # Redis connection
     redis_client = None
@@ -126,7 +126,7 @@ async def main() -> None:
     logger.info("learning_engine_ready", skills=len(learning_engine._skill_cache))
 
     # ── 4. Initialize Agents ────────────────────────────────────
-    from agents.queen import QueenOrchestrator
+    from superagent.agents.queen import QueenOrchestrator
 
     default_model = config.get("llm", {}).get("default_model", "anthropic/claude-sonnet-4-20250514")
     queen = QueenOrchestrator(
@@ -137,7 +137,7 @@ async def main() -> None:
     logger.info("queen_ready")
 
     # ── 5. Initialize Gateway ───────────────────────────────────
-    from gateway.router import MessageRouter
+    from superagent.gateway.router import MessageRouter
 
     # Parse allowed users
     allowed_users = {}
@@ -153,7 +153,7 @@ async def main() -> None:
     telegram_handler = None
 
     if telegram_token:
-        from gateway.telegram_handler import TelegramHandler
+        from superagent.gateway.telegram_handler import TelegramHandler
 
         telegram_handler = TelegramHandler(
             token=telegram_token,
@@ -172,7 +172,7 @@ async def main() -> None:
         logger.info("telegram_disabled", reason="no token")
 
     # ── 7. Start API Server ─────────────────────────────────────
-    from gateway.api_server import create_app
+    from superagent.gateway.api_server import create_app
 
     api_token = os.getenv("API_AUTH_TOKEN")
     cors_origins = config.get("gateway", {}).get("channels", {}).get("api", {}).get("cors_origins", ["*"])
