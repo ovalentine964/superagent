@@ -62,7 +62,7 @@ async def main():
     if telegram_token:
         from superagent.gateway.telegram_handler import TelegramBot
         telegram_bot = TelegramBot(
-            token=***,
+            token=telegram_token,
             router=router,
             queen=queen,
         )
@@ -80,7 +80,7 @@ async def main():
     api_port = int(os.environ.get("PORT", os.environ.get("API_SERVER_PORT", "8642")))
     api_key = os.environ.get("API_SERVER_KEY", "")
 
-    app = create_api_app(queen=queen, api_key=***)
+    app = create_api_app(queen=queen, api_key=api_key)
     config_uvicorn = uvicorn.Config(app, host=api_host, port=api_port, log_level="info")
     server = uvicorn.Server(config_uvicorn)
     logger.info(f"API server starting on {api_host}:{api_port}")
