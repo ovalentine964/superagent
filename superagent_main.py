@@ -3,6 +3,7 @@ import os
 import sys
 import logging
 import asyncio
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 import uvicorn
 
@@ -11,29 +12,17 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger("superagent")
 
-app = FastAPI(title="SUPERAGENT", version="0.1.0")
+# Global references
+tg_app = None
 
 
-@app.get("/health")
-async def health():
-    return {"status": "ok", "service": "superagent", "version": "0.1.0"}
-
-
-@app.get("/")
-async def root():
-    return {"status": "running", "service": "superagent"}
-
-
-@app.on_event("startup")
-async def startup():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage startup and shutdown."""
+    global tg_app
+    
     logger.info("SUPERAGENT v0.1.0 starting...")
-
-    # Set NVIDIA API key from env
-    nvidia_key = os.environ.get("NVIDIA_API_KEY", "")
-    if nvidia_key:
-        os.environ["NVIDIA_API_KEY"] = nvidia_key
-        logger.info("NVIDIA API key configured")
-
+    
     # Load config
     import yaml
     config_path = os.path.join(os.path.dirname(__file__), "superagent", "config.yaml")
@@ -49,9 +38,9 @@ async def startup():
         queen = QueenOrchestrator(model=model)
         await queen.initialize()
         app.state.queen = queen
-        logger.info(f"Queen initialized with model: {model}")
+        logger.info(f"Queen ready (model: {model})")
     except Exception as e:
-        logger.warning(f"Queen init failed: {e}")
+        logger.error(f"Queen failed: {e}")
         app.state.queen = None
 
     # Initialize Router
@@ -61,9 +50,9 @@ async def startup():
         if app.state.queen:
             router.set_queen(app.state.queen)
         app.state.router = router
-        logger.info("Router initialized")
+        logger.info("Router ready")
     except Exception as e:
-        logger.warning(f"Router init failed: {e}")
+        logger.error(f"Router failed: {e}")
         app.state.router = None
 
     # Start Telegram
@@ -78,12 +67,32 @@ async def startup():
                 allowed_users=[u for u in allowed if u] or None,
             )
             await tg.initialize()
+            tg_app = tg
+            # Start polling in background
             asyncio.create_task(tg.start_polling())
-            logger.info("Telegram bot started")
+            logger.info("Telegram polling started")
         except Exception as e:
-            logger.warning(f"Telegram init failed: {e}")
+            logger.error(f"Telegram failed: {e}")
 
     logger.info("SUPERAGENT ready!")
+    yield
+    # Shutdown
+    if tg_app:
+        await tg_app.stop()
+    logger.info("SUPERAGENT shutting down")
+
+
+app = FastAPI(title="SUPERAGENT", version="0.1.0", lifespan=lifespan)
+
+
+@app.get("/health")
+async def health():
+    return {"status": "ok", "service": "superagent", "version": "0.1.0"}
+
+
+@app.get("/")
+async def root():
+    return {"status": "running", "service": "superagent"}
 
 
 if __name__ == "__main__":
