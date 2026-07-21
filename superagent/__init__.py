@@ -1,0 +1,2 @@
+"""SUPERAGENT - Merged OpenClaw + Hermes Agent System."""
+__version__ = "0.1.0"
