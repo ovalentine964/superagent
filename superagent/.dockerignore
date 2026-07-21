@@ -1,0 +1,75 @@
+# ============================================================
+# SUPERAGENT .dockerignore
+# ============================================================
+
+# Version control
+.git
+.gitignore
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+*.egg-info
+dist
+build
+eggs
+*.egg
+.eggs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Virtual environments
+.venv
+venv
+env
+.env
+.env.*
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+.pytest_cache
+.coverage
+htmlcov
+.tox
+.nox
+
+# Docker (don't send docker files into build context)
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Documentation (not needed in image)
+*.md
+docs/
+LICENSE
+
+# Monitoring (baked in separately if needed)
+monitoring/
+
+# Data directories (mounted as volumes)
+data/
+logs/
+tmp/
+
+# GitHub workflows
+.github/
+
+# Node (if any frontend)
+node_modules/
+npm-debug.log*
+
+# Misc
+*.tar.gz
+*.zip
+.cache
+.mypy_cache
+.ruff_cache

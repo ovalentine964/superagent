@@ -1,0 +1,106 @@
+# ============================================================
+# SUPERAGENT — CI/CD Pipeline
+# Build → Test → Push to Registry → Deploy to Render
+# ============================================================
+
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:        # manual trigger
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # --- Test Gate ---
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Run linting
+        run: |
+          ruff check app/ tests/
+          ruff format --check app/ tests/
+
+      - name: Run tests
+        env:
+          DATABASE_URL: sqlite:///tmp/test.db
+          REDIS_URL: redis://localhost:6379/0
+          SECRET_KEY: test-secret-key
+          OPENROUTER_API_KEY: sk-test-placeholder
+          TELEGRAM_BOT_TOKEN: "123456:ABC-TEST"
+        run: |
+          pytest tests/ -v --tb=short --cov=app --cov-report=term-missing
+
+  # --- Build & Push Docker Image ---
+  build:
+    name: Build & Push
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,prefix=
+            type=raw,value=latest
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # --- Deploy to Render ---
+  deploy:
+    name: Deploy to Render
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Trigger Render deploy
+        run: |
+          curl -s -X POST \
+            "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" \
+            -H "Accept: application/json"
+        # To set up:
+        # 1. Go to Render Dashboard → your service → Settings
+        # 2. Copy the "Deploy Hook" URL
+        # 3. Add it as a GitHub secret: RENDER_DEPLOY_HOOK_URL

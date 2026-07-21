@@ -1,0 +1,81 @@
+# ============================================================
+# SUPERAGENT .gitignore
+# ============================================================
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+eggs/
+*.egg
+.eggs/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Virtual environments
+.venv/
+venv/
+env/
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing & coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+test-results.xml
+
+# Data & logs (runtime generated)
+data/
+logs/
+tmp/
+*.db
+*.db-journal
+*.sqlite
+
+# Docker volumes (local dev)
+redis-data/
+chroma-data/
+
+# MyPy / type checkers
+.mypy_cache/
+.pytype/
+
+# Ruff
+.ruff_cache/
+
+# Secrets — NEVER commit these
+*.pem
+*.key
+*.crt
+secrets.yaml
+secrets.yml
+
+# OS
+Thumbs.db
+Desktop.ini
+
+# Node (if any frontend assets)
+node_modules/
+npm-debug.log*
+
+# Misc
+*.tar.gz
+*.zip
+.cache/

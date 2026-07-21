@@ -1,0 +1,121 @@
+# ============================================================
+# SUPERAGENT — Test Pipeline
+# Runs on every PR and push to non-main branches
+# ============================================================
+
+name: Test
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [develop, 'feature/**']
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install linters
+        run: pip install ruff
+
+      - name: Ruff check
+        run: ruff check app/ tests/
+
+      - name: Ruff format check
+        run: ruff format --check app/ tests/
+
+  test:
+    name: Test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Run tests
+        env:
+          DATABASE_URL: sqlite:///tmp/test.db
+          REDIS_URL: redis://localhost:6379/0
+          SECRET_KEY: test-secret-key
+          OPENROUTER_API_KEY: sk-test-placeholder
+          TELEGRAM_BOT_TOKEN: "123456:ABC-TEST"
+          APP_ENV: testing
+        run: |
+          pytest tests/ -v --tb=short \
+            --cov=app \
+            --cov-report=term-missing \
+            --cov-report=xml:coverage.xml \
+            --junitxml=test-results.xml
+
+      - name: Upload coverage
+        if: matrix.python-version == '3.12'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.xml
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.python-version }}
+          path: test-results.xml
+
+  docker:
+    name: Docker Build Test
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image (no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          tags: superagent:test
+
+      - name: Verify image runs
+        run: |
+          docker run --rm -d --name test-run \
+            -e SECRET_KEY=test \
+            -e DATABASE_URL=sqlite:///tmp/test.db \
+            -p 8000:8000 \
+            superagent:test
+          sleep 5
+          curl -sf http://localhost:8000/health || exit 1
+          docker stop test-run
