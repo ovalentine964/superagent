@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { ClientSessionState } from '@/app/types'
+import { group } from '@/components/pane-shell/tree/model'
+import { $layoutTree } from '@/components/pane-shell/tree/store'
 import { createClientSessionState } from '@/lib/chat-runtime'
 import type { SessionInfo } from '@/types/hermes'
 
@@ -261,6 +263,7 @@ describe('getRecentlySettledSessionIds', () => {
     clearAllSessionStates()
     $selectedStoredSessionId.set(null)
     $unreadFinishedSessionIds.set([])
+    $layoutTree.set(null)
   })
 
   afterEach(() => {
@@ -268,6 +271,7 @@ describe('getRecentlySettledSessionIds', () => {
     clearAllSessionStates()
     $selectedStoredSessionId.set(null)
     $unreadFinishedSessionIds.set([])
+    $layoutTree.set(null)
   })
 
   it('keeps a session for the grace window after its turn settles, then drops it', () => {
@@ -318,12 +322,14 @@ describe('unread finished sessions', () => {
     clearAllSessionStates()
     $unreadFinishedSessionIds.set([])
     $selectedStoredSessionId.set(null)
+    $layoutTree.set(null)
   })
 
   afterEach(() => {
     clearAllSessionStates()
     $unreadFinishedSessionIds.set([])
     $selectedStoredSessionId.set(null)
+    $layoutTree.set(null)
   })
 
   it('marks a session unread when its turn finishes in the background', () => {
@@ -338,8 +344,9 @@ describe('unread finished sessions', () => {
     expect($unreadFinishedSessionIds.get()).toEqual(['s1'])
   })
 
-  it('does NOT mark unread when the finishing session is the active one', () => {
+  it('does NOT mark unread when the finishing session is visible in a pane', () => {
     $selectedStoredSessionId.set('s1')
+    $layoutTree.set(group(['workspace'], { id: 'workspace-group' }))
 
     const working = makeState({ busy: true, storedSessionId: 's1' })
     publishSessionState('rt1', working)
