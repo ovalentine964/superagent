@@ -1,40 +1,60 @@
-"""SUPERAGENT — Minimal entry point for Render."""
+"""SUPERAGENT — Merged OpenClaw + Hermes Agent."""
 import os
+import sys
 import logging
+import asyncio
 from fastapi import FastAPI
 import uvicorn
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger("superagent")
 
 app = FastAPI(title="SUPERAGENT", version="0.1.0")
 
+
 @app.get("/health")
 async def health():
     return {"status": "ok", "service": "superagent", "version": "0.1.0"}
+
 
 @app.get("/")
 async def root():
     return {"status": "running", "service": "superagent"}
 
+
 @app.on_event("startup")
 async def startup():
     logger.info("SUPERAGENT v0.1.0 starting...")
-    
-    # Try to initialize components
+
+    # Set OpenRouter API key from env
+    openrouter_key = os.environ.get("OPENROUTER_API_KEY", "")
+    if openrouter_key:
+        os.environ["OPENROUTER_API_KEY"] = openrouter_key
+        logger.info("OpenRouter API key configured")
+
+    # Load config
+    import yaml
+    config_path = os.path.join(os.path.dirname(__file__), "superagent", "config.yaml")
+    config = {}
+    if os.path.exists(config_path):
+        with open(config_path) as f:
+            config = yaml.safe_load(f) or {}
+
+    # Initialize Queen
     try:
-        import sys
-        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-        
         from superagent.agents.queen import QueenOrchestrator
-        queen = QueenOrchestrator()
+        model = config.get("llm", {}).get("default_model", "openrouter/anthropic/claude-sonnet-4")
+        queen = QueenOrchestrator(model=model)
         await queen.initialize()
         app.state.queen = queen
-        logger.info("Queen orchestrator initialized")
+        logger.info(f"Queen initialized with model: {model}")
     except Exception as e:
         logger.warning(f"Queen init failed: {e}")
         app.state.queen = None
 
+    # Initialize Router
     try:
         from superagent.gateway.router import MessageRouter
         router = MessageRouter()
@@ -46,7 +66,7 @@ async def startup():
         logger.warning(f"Router init failed: {e}")
         app.state.router = None
 
-    # Telegram
+    # Start Telegram
     tg_token = os.environ.get("TELEGRAM_BOT_TOKEN")
     if tg_token and app.state.router:
         try:
@@ -58,13 +78,13 @@ async def startup():
                 allowed_users=[u for u in allowed if u] or None,
             )
             await tg.initialize()
-            import asyncio
             asyncio.create_task(tg.start_polling())
             logger.info("Telegram bot started")
         except Exception as e:
             logger.warning(f"Telegram init failed: {e}")
 
     logger.info("SUPERAGENT ready!")
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "8642"))
