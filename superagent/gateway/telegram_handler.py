@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 import time
+import threading
 from typing import Any
 
 from telegram import BotCommand, Update
@@ -32,6 +33,7 @@ class TelegramHandler:
         self.router = router
         self.allowed_users = [int(u) for u in (allowed_users or []) if u]
         self._app: Application | None = None
+        self._thread: threading.Thread | None = None
 
     async def initialize(self) -> None:
         """Initialize the Telegram bot."""
@@ -56,12 +58,35 @@ class TelegramHandler:
         await self._app.bot.set_my_commands(commands)
         logger.info("Telegram bot initialized")
 
-    async def run_polling(self) -> None:
-        """Run polling (blocks until stopped)."""
+    def start_polling_thread(self) -> None:
+        """Start polling in a background thread."""
+        def _run():
+            import asyncio
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                loop.run_until_complete(self._poll())
+            except Exception as e:
+                logger.error(f"Polling thread error: {e}", exc_info=True)
+            finally:
+                loop.close()
+
+        self._thread = threading.Thread(target=_run, daemon=True)
+        self._thread.start()
+        logger.info("Telegram polling thread started")
+
+    async def _poll(self) -> None:
+        """Run the actual polling."""
         if not self._app:
             await self.initialize()
         assert self._app is not None
-        await self._app.run_polling(drop_pending_updates=True)
+        await self._app.start_polling(drop_pending_updates=True)
+        logger.info("Telegram polling active")
+        # Keep running until stopped
+        await self._app.updater.start_polling(drop_pending_updates=True)
+        # Wait forever
+        stop_event = threading.Event()
+        stop_event.wait()
 
     async def stop(self) -> None:
         """Stop the bot."""

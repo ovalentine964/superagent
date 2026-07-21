@@ -63,7 +63,7 @@ async def lifespan(app: FastAPI):
             )
             await tg.initialize()
             tg_app = tg
-            asyncio.create_task(tg.run_polling())
+            tg.start_polling_thread()
             logger.info("Telegram polling started")
         except Exception as e:
             logger.error(f"Telegram failed: {e}")
