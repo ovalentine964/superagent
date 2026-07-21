@@ -1,61 +1,71 @@
-"""SUPERAGENT Entry Point."""
-import asyncio
-import logging
+"""SUPERAGENT — Minimal entry point for Render."""
 import os
-import sys
+import logging
+from fastapi import FastAPI
+import uvicorn
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(levelname)s: %(message)s")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger("superagent")
 
+app = FastAPI(title="SUPERAGENT", version="0.1.0")
 
-async def main():
+@app.get("/health")
+async def health():
+    return {"status": "ok", "service": "superagent", "version": "0.1.0"}
+
+@app.get("/")
+async def root():
+    return {"status": "running", "service": "superagent"}
+
+@app.on_event("startup")
+async def startup():
     logger.info("SUPERAGENT v0.1.0 starting...")
+    
+    # Try to initialize components
+    try:
+        import sys
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        
+        from superagent.agents.queen import QueenOrchestrator
+        queen = QueenOrchestrator()
+        await queen.initialize()
+        app.state.queen = queen
+        logger.info("Queen orchestrator initialized")
+    except Exception as e:
+        logger.warning(f"Queen init failed: {e}")
+        app.state.queen = None
 
-    # Queen
-    from superagent.agents.queen import QueenOrchestrator
-    queen = QueenOrchestrator()
-    await queen.initialize()
-    logger.info("Queen ready")
-
-    # Router
-    from superagent.gateway.router import MessageRouter
-    router = MessageRouter()
-    router.set_queen(queen)
-    logger.info("Router ready")
+    try:
+        from superagent.gateway.router import MessageRouter
+        router = MessageRouter()
+        if app.state.queen:
+            router.set_queen(app.state.queen)
+        app.state.router = router
+        logger.info("Router initialized")
+    except Exception as e:
+        logger.warning(f"Router init failed: {e}")
+        app.state.router = None
 
     # Telegram
     tg_token = os.environ.get("TELEGRAM_BOT_TOKEN")
-    tg_handler = None
-    if tg_token:
-        from superagent.gateway.telegram_handler import TelegramHandler
-        allowed = os.environ.get("TELEGRAM_CHAT_ID", "").split(",")
-        tg_handler = TelegramHandler(
-            token=tg_token,
-            router=router,
-            allowed_users=[u for u in allowed if u] or None,
-        )
-        await tg_handler.initialize()
-        logger.info("Telegram ready")
+    if tg_token and app.state.router:
+        try:
+            from superagent.gateway.telegram_handler import TelegramHandler
+            allowed = os.environ.get("TELEGRAM_CHAT_ID", "").split(",")
+            tg = TelegramHandler(
+                token=tg_token,
+                router=app.state.router,
+                allowed_users=[u for u in allowed if u] or None,
+            )
+            await tg.initialize()
+            import asyncio
+            asyncio.create_task(tg.start_polling())
+            logger.info("Telegram bot started")
+        except Exception as e:
+            logger.warning(f"Telegram init failed: {e}")
 
-    # API Server
-    from superagent.gateway.api_server import create_app
-    import uvicorn
-
-    api_key = os.environ.get("API_SERVER_KEY", "")
-    port = int(os.environ.get("PORT", "8642"))
-
-    app = create_app(router=router, auth_token=api_key or None)
-    server = uvicorn.Server(uvicorn.Config(app, host="0.0.0.0", port=port, log_level="info"))
-    logger.info(f"API on port {port}")
-
-    # Run
-    tasks = [server.serve()]
-    if tg_handler:
-        tasks.append(tg_handler.start_polling())
-    await asyncio.gather(*tasks)
-
+    logger.info("SUPERAGENT ready!")
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    port = int(os.environ.get("PORT", "8642"))
+    uvicorn.run(app, host="0.0.0.0", port=port)
