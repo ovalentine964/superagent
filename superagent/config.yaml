@@ -10,9 +10,9 @@ system:
 
 # LLM Provider Configuration (via LiteLLM)
 llm:
-  default_model: "openrouter/anthropic/claude-sonnet-4"
-  fallback_model: "openrouter/openai/gpt-4o"
-  fast_model: "openrouter/openai/gpt-4o-mini"          # cheap model for sub-agents
+  default_model: "nvidia/minimaxai/minimax-m3"
+  fallback_model: "nvidia/meta/llama-3.1-nemotron-70b-instruct"
+  fast_model: "nvidia/meta/llama-3.1-nemotron-70b-instruct"          # cheap model for sub-agents
   embedding_model: "openai/text-embedding-3-small"
   api_base: null                              # override for self-hosted
   max_tokens: 4096

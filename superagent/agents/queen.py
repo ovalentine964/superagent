@@ -52,7 +52,7 @@ class QueenOrchestrator(BaseAgent):
     5. Handle cross-swarm coordination
     """
 
-    def __init__(self, model: str = "openrouter/anthropic/claude-sonnet-4", **kwargs: Any):
+    def __init__(self, model: str = "nvidia/minimaxai/minimax-m3", **kwargs: Any):
         super().__init__(
             agent_id="queen",
             model=model,

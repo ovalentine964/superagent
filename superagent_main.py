@@ -28,11 +28,11 @@ async def root():
 async def startup():
     logger.info("SUPERAGENT v0.1.0 starting...")
 
-    # Set OpenRouter API key from env
-    openrouter_key = os.environ.get("OPENROUTER_API_KEY", "")
-    if openrouter_key:
-        os.environ["OPENROUTER_API_KEY"] = openrouter_key
-        logger.info("OpenRouter API key configured")
+    # Set NVIDIA API key from env
+    nvidia_key = os.environ.get("NVIDIA_API_KEY", "")
+    if nvidia_key:
+        os.environ["NVIDIA_API_KEY"] = nvidia_key
+        logger.info("NVIDIA API key configured")
 
     # Load config
     import yaml
@@ -45,7 +45,7 @@ async def startup():
     # Initialize Queen
     try:
         from superagent.agents.queen import QueenOrchestrator
-        model = config.get("llm", {}).get("default_model", "openrouter/anthropic/claude-sonnet-4")
+        model = config.get("llm", {}).get("default_model", "nvidia/minimaxai/minimax-m3")
         queen = QueenOrchestrator(model=model)
         await queen.initialize()
         app.state.queen = queen

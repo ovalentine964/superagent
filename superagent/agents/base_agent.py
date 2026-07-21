@@ -99,7 +99,7 @@ class BaseAgent(ABC):
     def __init__(
         self,
         agent_id: str,
-        model: str = "openrouter/anthropic/claude-sonnet-4",
+        model: str = "nvidia/minimaxai/minimax-m3",
         tools: list[str] | None = None,
         workspace_path: str = "./workspace",
     ):
