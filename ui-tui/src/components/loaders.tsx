@@ -1,6 +1,8 @@
 import { Box, Text } from '@hermes/ink'
 import { useEffect, useState } from 'react'
 
+import { mix } from '../lib/color.js'
+
 /**
  * Animated ASCII loaders — THE loading-state primitives (session panel
  * skeleton, widget apps via the SDK). A highlight band sweeps across block
@@ -64,25 +66,45 @@ export function useShimmerPhase(tickMs = 90): number {
 }
 
 /** Skeleton rows shaped like `label: value` content, diagonal shimmer.
- *  `rows` = [labelWidth, valueWidth][] so callers mirror their real layout. */
+ *
+ *  Ergonomic for generated code (the primary author is an agent):
+ *  - `rows` — explicit `[labelWidth, valueWidth][]` mirroring real layout,
+ *    OR just a count (row widths derive from `width`, staggered).
+ *  - colors — explicit `color`/`highlight`, OR pass a theme `t` and they
+ *    derive (muted-toward-surface base, label highlight). */
 export function ShimmerRows({
   color,
   highlight,
-  rows
+  rows,
+  t,
+  width = 24
 }: {
-  color: string
-  highlight: string
-  rows: readonly (readonly [number, number])[]
+  color?: string
+  highlight?: string
+  rows: number | readonly (readonly [number, number])[]
+  t?: { color: { completionBg: string; label: string; muted: string } }
+  width?: number
 }) {
   const phase = useShimmerPhase()
+  const base = color ?? (t ? mix(t.color.muted, t.color.completionBg, 0.5) : '#808080')
+  const glow = highlight ?? t?.color.label ?? '#a0a0a0'
+
+  const spec: readonly (readonly [number, number])[] =
+    typeof rows === 'number'
+      ? Array.from({ length: Math.max(1, rows) }, (_, i) => {
+          const label = Math.max(4, Math.round(width * 0.3) - (i % 3))
+
+          return [label, Math.max(4, width - label - 1)] as const
+        })
+      : rows
 
   return (
     <Box flexDirection="column">
-      {rows.map(([labelWidth, valueWidth], i) => (
+      {spec.map(([labelWidth, valueWidth], i) => (
         <Text key={i}>
-          <Shimmer color={color} highlight={highlight} phase={phase - i * 2} width={labelWidth} />
+          <Shimmer color={base} highlight={glow} phase={phase - i * 2} width={labelWidth} />
           <Text> </Text>
-          <Shimmer color={color} highlight={highlight} phase={phase - i * 2 - labelWidth} width={valueWidth} />
+          <Shimmer color={base} highlight={glow} phase={phase - i * 2 - labelWidth} width={valueWidth} />
         </Text>
       ))}
     </Box>

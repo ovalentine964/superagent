@@ -1,6 +1,23 @@
 import { describe, expect, it } from 'vitest'
 
-import { shimmerSegments } from '../components/loaders.js'
+import { renderToScreen } from '../../packages/hermes-ink/src/ink/render-to-screen.js'
+import { cellAtIndex } from '../../packages/hermes-ink/src/ink/screen.js'
+import { ShimmerRows, shimmerSegments } from '../components/loaders.js'
+
+describe('ShimmerRows leniency (agent-authored calls)', () => {
+  it('accepts a bare row COUNT and derives widths — the generated-code shape', async () => {
+    const { createElement } = await import('react')
+
+    const { screen, height } = renderToScreen(
+      createElement(ShimmerRows, { rows: 3, width: 20, t: { color: { completionBg: '#1a1a2e', label: '#DAA520', muted: '#B8860B' } } }),
+      30
+    )
+
+    expect(height).toBe(3)
+    // Row 0 renders block cells, not a crash.
+    expect(cellAtIndex(screen, 0).char).toBe('▁')
+  })
+})
 
 describe('shimmerSegments', () => {
   it('always partitions the full width', () => {
