@@ -1,4 +1,4 @@
-# hermes-openclaw
+# superagent
 
 **Merged Hermes Agent + OpenClaw — Self-Improving Multi-Agent System**
 
