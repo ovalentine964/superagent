@@ -5,22 +5,12 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl gcc libpq-dev && rm -rf /var/lib/apt/lists/*
 
-# Install superagent dependencies only (not full hermes build)
 COPY superagent/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy superagent overlay
+# Copy only the superagent overlay (self-contained)
 COPY superagent/ ./superagent/
 COPY superagent_main.py .
-
-# Copy key hermes modules we integrate with
-COPY agent/ ./agent/
-COPY tools/ ./tools/
-COPY gateway/ ./gateway/
-COPY skills/ ./skills/
-COPY hermes_state.py .
-COPY hermes_constants.py .
-COPY model_tools.py .
 
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
 USER appuser
