@@ -2,7 +2,7 @@ services:
   - type: web
     name: superagent
     runtime: docker
-    repo: https://github.com/ovalentine964/hermes-agent
+    repo: https://github.com/ovalentine964/hermes-openclaw
     branch: main
     dockerfilePath: ./Dockerfile.superagent
     healthCheckPath: /health
