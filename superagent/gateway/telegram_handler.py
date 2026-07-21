@@ -8,7 +8,6 @@ from typing import Any
 from telegram import BotCommand, Update
 from telegram.ext import (
     Application,
-    CallbackQueryHandler,
     CommandHandler,
     ContextTypes,
     MessageHandler,
@@ -28,12 +27,10 @@ class TelegramHandler:
         token: str,
         router: MessageRouter,
         allowed_users: list[str] | None = None,
-        webhook_url: str | None = None,
     ):
         self.token = token
         self.router = router
         self.allowed_users = [int(u) for u in (allowed_users or []) if u]
-        self.webhook_url = webhook_url
         self._app: Application | None = None
 
     async def initialize(self) -> None:
@@ -59,13 +56,12 @@ class TelegramHandler:
         await self._app.bot.set_my_commands(commands)
         logger.info("Telegram bot initialized")
 
-    async def start_polling(self) -> None:
-        """Start polling for updates."""
+    async def run_polling(self) -> None:
+        """Run polling (blocks until stopped)."""
         if not self._app:
             await self.initialize()
         assert self._app is not None
-        await self._app.start_polling(drop_pending_updates=True)
-        logger.info("Telegram polling started")
+        await self._app.run_polling(drop_pending_updates=True)
 
     async def stop(self) -> None:
         """Stop the bot."""
