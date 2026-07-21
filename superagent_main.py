@@ -12,18 +12,12 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger("superagent")
 
-# Global references
-tg_app = None
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Manage startup and shutdown."""
     global tg_app
-    
     logger.info("SUPERAGENT v0.1.0 starting...")
-    
-    # Load config
+
     import yaml
     config_path = os.path.join(os.path.dirname(__file__), "superagent", "config.yaml")
     config = {}
@@ -31,7 +25,7 @@ async def lifespan(app: FastAPI):
         with open(config_path) as f:
             config = yaml.safe_load(f) or {}
 
-    # Initialize Queen
+    # Queen
     try:
         from superagent.agents.queen import QueenOrchestrator
         model = config.get("llm", {}).get("default_model", "nvidia/minimaxai/minimax-m3")
@@ -43,7 +37,7 @@ async def lifespan(app: FastAPI):
         logger.error(f"Queen failed: {e}")
         app.state.queen = None
 
-    # Initialize Router
+    # Router
     try:
         from superagent.gateway.router import MessageRouter
         router = MessageRouter()
@@ -55,8 +49,9 @@ async def lifespan(app: FastAPI):
         logger.error(f"Router failed: {e}")
         app.state.router = None
 
-    # Start Telegram
+    # Telegram
     tg_token = os.environ.get("TELEGRAM_BOT_TOKEN")
+    tg_app = None
     if tg_token and app.state.router:
         try:
             from superagent.gateway.telegram_handler import TelegramHandler
@@ -68,18 +63,24 @@ async def lifespan(app: FastAPI):
             )
             await tg.initialize()
             tg_app = tg
-            # Start polling in background
-            asyncio.create_task(tg.start_polling())
+            asyncio.create_task(_run_telegram(tg))
             logger.info("Telegram polling started")
         except Exception as e:
             logger.error(f"Telegram failed: {e}")
 
     logger.info("SUPERAGENT ready!")
     yield
-    # Shutdown
     if tg_app:
         await tg_app.stop()
-    logger.info("SUPERAGENT shutting down")
+    logger.info("SUPERAGENT stopped")
+
+
+async def _run_telegram(tg):
+    """Run Telegram polling with error handling."""
+    try:
+        await tg.start_polling()
+    except Exception as e:
+        logger.error(f"Telegram polling error: {e}")
 
 
 app = FastAPI(title="SUPERAGENT", version="0.1.0", lifespan=lifespan)
