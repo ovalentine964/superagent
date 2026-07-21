@@ -1,0 +1,55 @@
+# ============================================================
+# SUPERAGENT — Render Blueprint
+# Web Service + Redis — targets $12-22/mo
+# ============================================================
+#
+# Deploy: push to GitHub → Render auto-detects this file
+# Dashboard: https://dashboard.render.com
+#
+
+services:
+  # --- Web Service (Starter: $7/mo) ---
+  - type: web
+    name: superagent
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: starter              # $7/mo — 512MB RAM, 0.5 CPU, always-on
+    region: oregon             # change to frankfurt for EU/Africa
+    branch: main
+    autoDeploy: true
+    healthCheckPath: /health
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_PORT
+        value: "10000"         # Render injects PORT; we map it
+      - key: LOG_LEVEL
+        value: INFO
+      - key: SECRET_KEY
+        generateValue: true    # Render auto-generates a secure key
+      - key: DATABASE_URL
+        value: sqlite:///app/data/superagent.db
+      - key: REDIS_URL
+        fromService:
+          name: superagent-redis
+          property: connectionString
+      - key: OPENROUTER_API_KEY
+        sync: false            # set manually in dashboard
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false            # set manually in dashboard
+      - key: HELICONE_API_KEY
+        sync: false
+      - key: SENTRY_DSN
+        sync: false
+    disk:
+      name: superagent-data
+      mountPath: /app/data
+      sizeGB: 1                # $0.25/mo for 1GB
+
+  # --- Redis (Starter: $10/mo, or use free 25MB for dev) ---
+  - type: redis
+    name: superagent-redis
+    plan: starter              # $10/mo — 256MB, persist enabled
+    region: oregon
+    ipAllowList: []            # private only, accessed via internal URL
+    maxmemoryPolicy: allkeys-lru

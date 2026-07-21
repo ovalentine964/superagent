@@ -1,0 +1,41 @@
+# Core
+fastapi==0.115.12
+uvicorn[standard]==0.34.2
+pydantic==2.11.3
+pydantic-settings==2.9.1
+python-dotenv==1.1.0
+pyyaml==6.0.2
+
+# LLM
+litellm==1.72.6
+
+# Agent Orchestration
+langgraph==0.4.5
+langchain-core==0.3.63
+
+# Database
+sqlalchemy==2.0.41
+aiosqlite==0.21.0
+alembic==1.16.2
+
+# Vector Store
+chromadb==1.0.12
+
+# Cache / Pub-Sub
+redis[hiredis]==6.2.0
+
+# Telegram
+python-telegram-bot==22.1
+
+# HTTP Client
+httpx==0.28.1
+aiohttp==3.12.4
+
+# Scheduling
+apscheduler==3.11.0
+
+# Utilities
+numpy>=1.26.0
+tiktoken>=0.9.0
+python-multipart==0.0.20
+structlog==25.4.0

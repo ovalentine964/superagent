@@ -1,0 +1,170 @@
+# SUPERAGENT Configuration
+# Merged system: OpenClaw orchestration + Hermes learning loop
+
+system:
+  name: "SUPERAGENT"
+  version: "0.1.0"
+  log_level: "INFO"
+  data_dir: "./data"
+  workspace_dir: "./workspace"
+
+# LLM Provider Configuration (via LiteLLM)
+llm:
+  default_model: "anthropic/claude-sonnet-4-20250514"
+  fallback_model: "openai/gpt-4o"
+  fast_model: "openai/gpt-4o-mini"          # cheap model for sub-agents
+  embedding_model: "openai/text-embedding-3-small"
+  api_base: null                              # override for self-hosted
+  max_tokens: 4096
+  temperature: 0.7
+
+# Agent System
+agents:
+  queen:
+    id: "queen"
+    description: "Master orchestrator — routes tasks to specialized swarms"
+    model: "${llm.default_model}"
+    max_concurrent_swarms: 5
+    routing_strategy: "semantic"              # semantic | round_robin | capacity
+
+  swarms:
+    market:
+      id: "market_swarm"
+      description: "Market intelligence — prices, trends, analysis"
+      workers: 3
+      model: "${llm.default_model}"
+      tools:
+        - "market_data"
+        - "web_search"
+        - "web_fetch"
+        - "chart_generator"
+
+    info:
+      id: "info_swarm"
+      description: "Information network — research, fact-checking, summarization"
+      workers: 3
+      model: "${llm.default_model}"
+      tools:
+        - "web_search"
+        - "web_fetch"
+        - "browser"
+        - "document_parser"
+
+    coord:
+      id: "coord_swarm"
+      description: "Coordination engine — scheduling, alerts, multi-agent orchestration"
+      workers: 2
+      model: "${llm.fast_model}"
+      tools:
+        - "cron_scheduler"
+        - "notification_sender"
+        - "task_board"
+
+# Memory Configuration
+memory:
+  # Workspace-style memory (OpenClaw pattern)
+  workspace:
+    enabled: true
+    paths:
+      agents_md: "./workspace/AGENTS.md"
+      soul_md: "./workspace/SOUL.md"
+      user_md: "./workspace/USER.md"
+      memory_md: "./workspace/MEMORY.md"
+      daily_dir: "./workspace/memory"
+
+  # Vector store for RAG
+  vector:
+    provider: "chromadb"
+    host: "localhost"
+    port: 8000
+    collection: "superagent_memory"
+    embedding_dimensions: 1536
+
+  # Session search (Hermes FTS5 pattern)
+  session_search:
+    enabled: true
+    db_path: "./data/sessions.db"
+
+  # Learning loop (Hermes pattern)
+  learning:
+    enabled: true
+    auto_skill_creation: true
+    skill_improvement: true
+    memory_curation_interval_minutes: 30
+    nudge_prompt: |
+      Review the recent conversation. If anything is worth remembering
+      long-term — a user preference, a useful fact, a decision made —
+      write it to memory. If you discovered a better way to do something,
+      update or create a skill.
+
+# Redis Configuration
+redis:
+  host: "localhost"
+  port: 6379
+  db: 0
+  password: null
+  cache_ttl_seconds: 3600
+
+# ChromaDB Configuration
+chromadb:
+  host: "localhost"
+  port: 8000
+  collection: "superagent_vectors"
+
+# Database
+database:
+  url: "sqlite:///./data/superagent.db"
+  echo: false
+
+# Gateway — Channel Configuration
+gateway:
+  host: "0.0.0.0"
+  port: 8080
+
+  channels:
+    telegram:
+      enabled: true
+      token: "${TELEGRAM_BOT_TOKEN}"
+      allowed_users: []                       # empty = allow all
+      webhook_url: null                       # set for webhook mode
+
+    discord:
+      enabled: false
+      token: "${DISCORD_BOT_TOKEN}"
+      guild_ids: []
+
+    api:
+      enabled: true
+      auth_token: "${API_AUTH_TOKEN}"
+      cors_origins: ["*"]
+
+# Tools Configuration
+tools:
+  registry:
+    auto_discover: true
+    tool_dirs: ["./tools"]
+
+  market:
+    alpha_vantage_key: "${ALPHA_VANTAGE_API_KEY}"
+    yahoo_finance_enabled: true
+    crypto_enabled: true
+
+  communication:
+    email_enabled: false
+    sms_enabled: false
+
+# Cron / Scheduling
+cron:
+  enabled: true
+  tick_interval_seconds: 60
+  max_concurrent_jobs: 3
+  timezone: "Asia/Shanghai"
+
+# Security
+security:
+  sandbox_exec: true
+  max_tool_timeout_seconds: 300
+  memory_write_approval: false               # true = require human approval
+  rate_limit:
+    requests_per_minute: 60
+    tokens_per_minute: 100000
